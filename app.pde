@@ -2,9 +2,16 @@
 // Setting the height and width of the canvas element
 var stageWidth = 800;
 var stageHeight = 600;
-var playerX = stageWidth/2 - 25;
-var playerY = stageHeight/2 - 25;
-var lastKeyPressed = "UP";
+
+var NUM_LIVES = 3;
+
+var player = {
+	lives: NUM_LIVES,
+	xPos: stageWidth/2 - 25,
+	yPos: stageHeight/2 - 25,
+	lastFired: -Infinity
+};
+
 // The Setup loop prepares the stage for action!
 void setup() {
 	size(stageWidth,stageHeight);
@@ -19,30 +26,48 @@ void draw() {
 	fill(255,255,255);
 	DrawPlayer();
 	UpdatePlayer();
-	UpdateBullets();
+	DrawShurikens();
+	UpdateShurikens();
 }
 
 var DrawPlayer = function() {
 	fill(255,255,255);
-	rect(playerX, playerY, 50, 50);
-	println(playerY);
+	rect(player.xPos, player.yPos, 50, 50);
 };
 
 var UpdatePlayer = function() {
 	if(keyPressed) {
 		if(key == CODED) {
+			/*
+				if(keyCode == UP) {
+					player.yPos--;
+				}
+
+				if(keyCode == DOWN) {
+					player.yPos++;
+				}
+
+				if(keyCode == LEFT) {
+					player.xPos--;	
+				}
+
+				if(keyCode == RIGHT) {
+					player.xPos++;
+				}
+			*/
+
 			switch (keyCode) {
 				case UP:
-					playerY--;
+					player.yPos--;
 					break;
 				case DOWN:
-					playerY++;
+					player.yPos++;
 					break;
 				case LEFT:
-					playerX--;
+					player.xPos--;
 					break;
 				case RIGHT:
-					playerX++;
+					player.xPos++;
 					break;
 				default:
 					// Do nothing
@@ -54,37 +79,68 @@ var UpdatePlayer = function() {
 };
 
 var CheckPlayerBounds = function() {
-	if(playerX <= 0) {
-		playerX = 0;
-	} else if(playerX >= stageWidth - 50) {
-		playerX = stageWidth - 50;
+	if(player.xPos <= 0) {
+		player.xPos = 0;
+	} else if(player.xPos >= stageWidth - 50) {
+		player.xPos = stageWidth - 50;
 	} 
 
-	if(playerY <= 0) {
-		playerY = 0;
-	} else if(playerY >= stageHeight - 50) {
-		playerY = stageHeight - 50;
+	if(player.yPos <= 0) {
+		player.yPos = 0;
+	} else if(player.yPos >= stageHeight - 50) {
+		player.yPos = stageHeight - 50;
 	}
 };
 
-var Shuriken = function(direction) {
-	this.xPos = playerX;
-	this.yPos = playerY;
+var Shuriken = function() {
+	this.xPos = player.xPos + 25;
+	this.yPos = player.yPos + 25;
+	this.OrigXPos = player.xPos + 25;
+	this.OrigYPos = player.yPos + 25;
 	this.width = 10;
 	this.height = 10;
-	this.direction = direction;
+	this.targetX = mouseX;
+	this.targetY = mouseY;
+	this.slope = (this.OrigYPos - this.targetY)/(this.OrigXPos - this.targetX);
+	this.angle = atan((this.OrigYPos - this.targetY)/(this.OrigXPos - this.targetX));
 }
 
-var DrawBullets = function() {
-	var shuriken = new Shuriken(lastKeyPressed);
-	//ellipse(shuriken.xPos, shuriken.yPos, shuriken.width, shuriken.height);
+var DrawShurikens = function() {
+	if(!mousePressed) {
+		return;
+	}
+
+	if(frameCount - player.lastFired < 30) {
+		return;
+	}
+
+	var shuriken = new Shuriken();
 	shurikens.push(shuriken);
+
+	player.lastFired = frameCount;
 };
 
-var UpdateBullets = function() {
+var UpdateShurikens = function() {
 	for(var i = 0; i < shurikens.length; i++) {
 		var shuriken = shurikens[i];
+		
 		ellipse(shuriken.xPos, shuriken.yPos, shuriken.width, shuriken.height);
 
+		if(shuriken.targetX < shuriken.OrigXPos) {
+			shuriken.xPos -= 5;
+		} else {
+			shuriken.xPos += 5;
+		}
+		var intercept = shuriken.OrigYPos - shuriken.slope * shuriken.OrigXPos;
+		if(shuriken.targetY < shuriken.OrigYPos) {
+			shuriken.yPos = shuriken.slope * shuriken.xPos + intercept;
+		} else {
+			shuriken.yPos = shuriken.slope * shuriken.xPos + intercept;
+		}
+
+		if(shuriken.xPos <= 0 || shuriken.xPos >= stageWidth || shuriken.yPos <= 0 || shuriken.yPos >= stageHeight) {
+			shurikens.splice(i, 1);
+		}
 	}
 };
+
